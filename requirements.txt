@@ -1,0 +1,15 @@
+# Core data
+pandas>=2.1.0
+numpy>=1.26.0
+
+# Machine learning
+scikit-learn>=1.4.0
+
+# Visualisation
+matplotlib>=3.8.0
+
+# AWS SDK (needed for cloud deployment; optional for local dev)
+boto3>=1.34.0
+
+# Development / testing
+pytest>=8.0.0

@@ -8,10 +8,11 @@ wired to real AWS resources by swapping the clients below.
 Proposed architecture (as discussed in group meeting 2026-05-22):
   Ingestion  : S3 (batch files) + Kinesis Data Streams (live NGS)
   Processing : AWS Glue (ETL/feature engineering)
-  Storage    : S3 Data Lake (raw/processed/curated zones) + Redshift (analytics)
+  Storage    : S3 Data Lake (raw/processed/curated zones) + RDS PostgreSQL Multi-AZ (operational)
+  Serving    : Athena (SQL on S3) + QuickSight (dashboards)
   ML         : SageMaker (training + real-time inference endpoint)
   AI/NLP     : Amazon Bedrock (Claude) via chatbot interface
-  Serving    : API Gateway + Lambda
+  API        : API Gateway + Lambda
   Monitoring : CloudWatch + Glue Data Quality
 """
 
@@ -35,7 +36,8 @@ class AWSConfig:
     curated_bucket: str = "nfl-data-lake-curated"
     kinesis_stream: str = "nfl-ngs-live-stream"
     glue_database: str = "nfl_analytics"
-    redshift_cluster: str = "nfl-redshift-cluster"
+    athena_workgroup: str = "nfl-analytics-workgroup"
+    athena_output_bucket: str = "nfl-athena-results"
     sagemaker_endpoint: str = "nfl-injury-prediction-v1"
     bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     environment: str = "prod"  # dev | pre-prod | prod  (R2)
@@ -213,6 +215,10 @@ class NFLDataPipeline:
         predictions_uri = f"s3://{self.config.curated_bucket}/injury_predictions/latest/"
         batch_job = self.sagemaker.batch_transform(processed_uri, predictions_uri)
         print(f"[Pipeline] SageMaker batch job: {batch_job}")
+
+        # 5. Register curated dataset in Glue Catalog so Athena can query it
+        print(f"[Pipeline] Curated data queryable via Athena: "
+              f"SELECT * FROM {self.config.glue_database}.injury_predictions")
 
         return {
             "status": "success",
